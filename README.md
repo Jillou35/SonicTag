@@ -64,7 +64,7 @@ def audio_callback(indata, frames, time, status):
 
 with sd.InputStream(callback=audio_callback, channels=1, samplerate=48000):
     print("Listening...")
-```
+
     while True:
         pass
 ```
@@ -75,39 +75,39 @@ To run the full web application demo (Frontend + Backend):
 
 ### 1. Backend Setup
 
-1.  Navigate to the backend directory:
-    ```bash
+1. Navigate to the backend directory:
+```bash
     cd web_app/backend
-    ```
-2.  Install requirements:
-    ```bash
+```
+2. Install requirements:
+```bash
     pip install -r requirements.txt
-    ```
-3.  Start the FastAPI server:
-    ```bash
+```
+3. Start the FastAPI server:
+```bash
     uvicorn main:app --reload --host 0.0.0.0 --port 8000
-    ```
+```
 
 ### 2. Frontend Setup
 
-1.  Navigate to the frontend directory:
-    ```bash
+1. Navigate to the frontend directory:
+```bash
     cd web_app/frontend
-    ```
-2.  Install dependencies:
-    ```bash
+```
+2. Install dependencies:
+```bash
     npm install
-    ```
-3.  Start the development server:
-    ```bash
+```
+3. Start the development server:
+```bash
     npm run dev
-    ```
+```
 
 ### 3. Usage
 
-1.  Open the URL shown in the frontend terminal (usually `https://localhost:5173`).
-2.  Grant microphone permissions when prompted.
-3.  Use the interface to transmit and receive data between devices or tabs.
+1. Open the URL shown in the frontend terminal (usually `https://localhost:5173`).
+2. Grant microphone permissions when prompted.
+3. Use the interface to transmit and receive data between devices or tabs.
 
 ## Scripts
 
@@ -130,10 +130,10 @@ python scripts/acoustic_loopback.py --fs 48000
 
 ## Architecture
 
-1.  **SonicDataHandler**: Encodes raw bytes into packets with Length, CRC32, and Reed-Solomon parity.
-2.  **SonicOFDM**: Maps bits to frequency subcarriers and generates time-domain OFDM symbols.
-3.  **SonicSync**: Generates and detects linear chirps for frame synchronization.
-4.  **SonicTransceiver**: Combines these modules to provide a high-level `transmit` / `receive` API.
+1. **SonicDataHandler**: Encodes raw bytes into packets with Length, CRC32, and Reed-Solomon parity.
+2. **SonicOFDM**: Maps bits to frequency subcarriers and generates time-domain OFDM symbols.
+3. **SonicSync**: Generates and detects linear chirps for frame synchronization.
+4. **SonicTransceiver**: Combines these modules to provide a high-level `transmit` / `receive` API.
 
 ## Testing
 
