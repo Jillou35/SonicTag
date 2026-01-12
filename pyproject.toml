@@ -10,7 +10,7 @@ authors = [
   { name="Jillian Strenk", email="jillian.strenk@posteo.net" },
 ]
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -19,6 +19,7 @@ classifiers = [
 dependencies = [
     "numpy",
     "scipy",
+    "scipy-stubs",
     "reedsolo",
 ]
 [project.optional-dependencies]

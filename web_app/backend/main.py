@@ -1,14 +1,11 @@
 import asyncio
-import collections
 import json
 import logging
 import io
 import queue
 import threading
-import time
 import numpy as np
 import scipy.io.wavfile
-from scipy import signal
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
@@ -35,16 +32,17 @@ TARGET_FS = 48000
 tx = SonicTransmitter(sample_rate=TARGET_FS)
 rx = SonicReceiver(sample_rate=TARGET_FS)
 
-BUFFER_DURATION = 1.0 # Optimized for fast 0.3s packets 
+BUFFER_DURATION = 1.0  # Optimized for fast 0.3s packets
 BUFFER_SIZE = int(TARGET_FS * BUFFER_DURATION)
 
 # --- Threaded DSP Architecture ---
-audio_queue = queue.Queue()
-processing_active = False
-active_connections = [] # List of active WebSockets
+audio_queue: queue.Queue = queue.Queue()
+processing_active: bool = False
+active_connections: list[WebSocket] = []
 
 # We need a reference to the main event loop to dispatch async messages from the thread
 main_loop = None
+
 
 def audio_processing_worker():
     """
@@ -52,59 +50,60 @@ def audio_processing_worker():
     """
     global processing_active
     logger.info("DSP Worker Thread Started")
-    
+
     # Local buffer for the worker
     worker_buffer = np.zeros(0, dtype=np.float32)
-    
+
     while processing_active:
         try:
             # Get data from queue
             chunk = audio_queue.get(timeout=1.0)
-            
+
             # RMS Level Check
-            rms = np.sqrt(np.mean(chunk**2))
-            
+            # rms = np.sqrt(np.mean(chunk**2))
+
             # Clip Detection
             max_amp = np.max(np.abs(chunk))
             if max_amp > 0.95:
-                 logger.warning(f"Input Clipping Detected! Max: {max_amp:.2f}")
+                logger.warning(f"Input Clipping Detected! Max: {max_amp:.2f}")
 
             # Append to worker buffer (Thread Safe-ish, as only one producer/consumer)
             worker_buffer = np.concatenate((worker_buffer, chunk))
-            
+
             # Sliding Window Management
             if len(worker_buffer) > BUFFER_SIZE:
                 worker_buffer = worker_buffer[-BUFFER_SIZE:]
-            
-            # Attempt Decode
-            
+
             # Attempt Decode
             try:
                 # Heavy Blocking Call
                 # Now returns (payload, consumed_samples)
                 decoded_payload, consumed = rx.decode_frame(worker_buffer)
-                
+
                 # Correctly advance buffer
                 if consumed > 0:
-                     worker_buffer = worker_buffer[consumed:]
-                
+                    worker_buffer = worker_buffer[consumed:]
+
                 if decoded_payload:
-                    message = json.loads(decoded_payload.decode('utf-8'))
+                    message = json.loads(decoded_payload.decode("utf-8"))
                     logger.info(f"Rx Success! Decoded: {message}")
-                    
+
                     # Broadcast back to WebSockets
                     if main_loop and main_loop.is_running():
-                        asyncio.run_coroutine_threadsafe(broadcast_message(message), main_loop)
-                    
-            except Exception as e:
-                pass
-                
+                        asyncio.run_coroutine_threadsafe(
+                            broadcast_message(message), main_loop
+                        )
+
+            except Exception:
+                logger.debug("Decode failed")
+
             audio_queue.task_done()
-            
+
         except queue.Empty:
             continue
         except Exception as e:
             logger.error(f"DSP Worker Error: {e}")
+
 
 async def broadcast_message(data: dict):
     """
@@ -116,10 +115,11 @@ async def broadcast_message(data: dict):
             await ws.send_json({"type": "message", "data": data})
         except Exception:
             to_remove.append(ws)
-    
+
     for ws in to_remove:
         if ws in active_connections:
             active_connections.remove(ws)
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -129,15 +129,19 @@ async def startup_event():
     t = threading.Thread(target=audio_processing_worker, daemon=True)
     t.start()
 
+
 @app.on_event("shutdown")
 def shutdown_event():
     global processing_active
     processing_active = False
 
+
 # --- API Endpoints ---
+
 
 class TransmitRequest(BaseModel):
     payload: dict
+
 
 @app.post("/api/transmit")
 async def transmit(request: TransmitRequest):
@@ -145,24 +149,25 @@ async def transmit(request: TransmitRequest):
     Encodes JSON payload and returns a WAV file.
     """
     try:
-        data_bytes = json.dumps(request.payload).encode('utf-8')
-        
+        data_bytes = json.dumps(request.payload).encode("utf-8")
+
         # Generator signal (float32, +/- 1.0)
         signal = tx.create_audio_frame(data_bytes)
-        
+
         # Convert to 16-bit PCM for WAV compatibility
         signal_int16 = (signal * 32767).astype(np.int16)
-        
+
         # Write to BytesIO
         wav_buffer = io.BytesIO()
         scipy.io.wavfile.write(wav_buffer, TARGET_FS, signal_int16)
         wav_buffer.seek(0)
-        
+
         return Response(content=wav_buffer.read(), media_type="audio/wav")
-        
+
     except Exception as e:
         logger.error(f"Transmit failed: {e}")
         return {"status": "error", "message": str(e)}
+
 
 @app.websocket("/ws/receive")
 async def receive_socket(websocket: WebSocket):
@@ -173,53 +178,56 @@ async def receive_socket(websocket: WebSocket):
     await websocket.accept()
     logger.info("Client connected to Receiver Socket")
     active_connections.append(websocket)
-    
-    client_sr = TARGET_FS # Default assumption
-    resample_ratio = 1.0
-    
+
+    client_sr = TARGET_FS  # Default assumption
+
     try:
         while True:
             # We need to handle both Text (JSON Config) and Binary (Audio)
             # receive() auto-detects
             message = await websocket.receive()
-            
+
             if "text" in message:
                 try:
                     data = json.loads(message["text"])
                     if data.get("type") == "config":
                         client_sr = data.get("sampleRate", TARGET_FS)
-                        
+
                         # ADAPTIVE RATE SWITCH
                         # If the client is running at a different rate (e.g. 44100 vs 48000),
                         # we switch the backend to match. This avoids resampling artifacts.
                         # CAUTION: This affects all connected clients (Single User assumption).
                         global rx, tx
                         if client_sr != rx.fs:
-                             logger.warning(f"Switching Backend Sample Rate to {client_sr} Hz")
-                             # Re-init Transceiver
-                             rx = SonicReceiver(sample_rate=client_sr)
-                             tx = SonicTransmitter(sample_rate=client_sr)
-                             # Note: BUFFER_SIZE not updated dynamically, but it's large enough (48k)
-                             
+                            logger.warning(
+                                f"Switching Backend Sample Rate to {client_sr} Hz"
+                            )
+                            # Re-init Transceiver
+                            rx = SonicReceiver(sample_rate=client_sr)
+                            tx = SonicTransmitter(sample_rate=client_sr)
+                            # Note: BUFFER_SIZE not updated dynamically, but it's large enough (48k)
+
                 except Exception as e:
                     logger.error(f"Config Parse Error: {e}")
-                    
+
             elif "bytes" in message:
                 data = message["bytes"]
-                
+
                 # Convert to numpy
                 block = np.frombuffer(data, dtype=np.float32)
-                
+
                 # Send to Processing Queue (Non-blocking)
                 # No Resampling! We trust the Adaptive Switch.
                 audio_queue.put(block)
-                
+
     except WebSocketDisconnect:
         logger.info("Client disconnected")
         if websocket in active_connections:
             active_connections.remove(websocket)
     except RuntimeError as e:
-        if 'Cannot call "receive" once a disconnect message has been received' in str(e):
+        if 'Cannot call "receive" once a disconnect message has been received' in str(
+            e
+        ):
             logger.info("Client disconnected (RuntimeError)")
             if websocket in active_connections:
                 active_connections.remove(websocket)

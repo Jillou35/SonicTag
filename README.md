@@ -5,7 +5,9 @@
 SonicTag is a Python package that enables data transmission between devices using ultrasonic audio signals (17kHz - 20kHz). It uses **OFDM** (Orthogonal Frequency-Division Multiplexing) and **Reed-Solomon** error correction to provide robust, near-audible data transfer through standard microphones and speakers.
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)
+![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)
+![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)
+![Tests](https://img.shields.io/badge/tests-passing-green.svg)
 
 ## Features
 
