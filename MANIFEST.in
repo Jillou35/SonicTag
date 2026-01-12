@@ -1,0 +1,13 @@
+include README.md
+include LICENSE
+include pyproject.toml
+graft src
+prune tests
+prune scripts
+prune web_app
+global-exclude *.py[cod]
+global-exclude __pycache__
+global-exclude *.so
+global-exclude *.dylib
+global-exclude *.wav
+global-exclude *.jsx

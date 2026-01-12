@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sonictag"
+version = "0.1.0"
+description = "Ultrasonic data transmission package using OFDM and Reed-Solomon ECC"
+authors = [
+  { name="Jillian Strenk", email="jillian.strenk@posteo.net" },
+]
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy",
+    "scipy",
+    "reedsolo",
+]
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+
+[project.urls]
+Homepage = "https://github.com/jillou35/SonicTag"
+Repository = "https://github.com/jillou35/SonicTag"
+Issues = "https://github.com/jillou35/SonicTag/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
