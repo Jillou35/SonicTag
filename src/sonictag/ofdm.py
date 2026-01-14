@@ -45,9 +45,7 @@ class SonicOFDM:
         """
         # 1. Pad bits
         n_bits = len(bits)
-        padding = (
-            self.bits_per_symbol - (n_bits % self.bits_per_symbol)
-        ) % self.bits_per_symbol
+        padding = (self.bits_per_symbol - (n_bits % self.bits_per_symbol)) % self.bits_per_symbol
         if padding > 0:
             bits = np.concatenate([bits, np.zeros(padding, dtype=int)])
 

@@ -1,10 +1,6 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "sonictag"
-version = "0.1.0"
+version = "0.2.0"
 license = "MIT"
 description = "Ultrasonic data transmission package using OFDM and Reed-Solomon ECC"
 authors = [
@@ -21,11 +17,8 @@ dependencies = [
     "scipy",
     "scipy-stubs",
     "reedsolo",
-]
-[project.optional-dependencies]
-test = [
-    "pytest",
-    "pytest-cov",
+    "soundfile",
+    "sounddevice",
 ]
 
 [project.urls]
@@ -35,3 +28,91 @@ Issues = "https://github.com/jillou35/SonicTag/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.0.0",
+    "twine>=4.0.0",
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "mypy>=1.8.0",
+    "ruff>=0.1.0",
+    "interrogate>=1.5.0",
+    "coverage-badge>=1.1.0",
+    "pip-audit>=2.7.0",
+    "taskipy>=1.12.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sonictag"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+    "S",  # flake8-bandit
+]
+ignore = ["S101", # flake8-bandit assert is not allowed
+        "S311"] # flake8-bandit standard pseudo-random generators are not suitable for cryptographic purposes
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--cov=src/sonictag --cov-report=term-missing --cov-report=xml"
+testpaths = [
+    "tests",
+]
+
+[tool.interrogate]
+ignore-init-module = true
+ignore-init-method = true
+ignore-module = true
+fail-under = 95
+exclude = ["setup.py", "docs", "tests"]
+
+[tool.taskipy.tasks]
+format = "ruff format . && ruff check --fix ."
+lint = "ruff check . && mypy src/"
+audit = "pip-audit ."
+docs = "interrogate -v src/"
+test = "pytest"
+check = "task format && task lint && task audit && task docs && task test"
+build = "uv build"
+test-deploy = "twine upload --repository testpypi dist/*"
+deploy = "twine upload dist/*"

@@ -1,6 +1,7 @@
-import unittest
 import struct
-from sonictag.data import SonicDataHandler, ReedSolomonError
+import unittest
+
+from sonictag.data import ReedSolomonError, SonicDataHandler
 
 
 class TestSonicDataHandler(unittest.TestCase):

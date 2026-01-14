@@ -1,6 +1,7 @@
 import struct
 import zlib
-from reedsolo import RSCodec, ReedSolomonError
+
+from reedsolo import ReedSolomonError, RSCodec  # type: ignore
 
 
 class SonicDataHandler:
@@ -31,7 +32,7 @@ class SonicDataHandler:
         """
 
         # 1. RS Encode
-        encoded_payload = self.rsc.encode(payload)
+        encoded_payload = bytes(self.rsc.encode(payload))
 
         # 2. Calculate CRC32 of the ENCODED payload (to check integrity after demodulation)
         crc = zlib.crc32(encoded_payload) & 0xFFFFFFFF
@@ -65,9 +66,7 @@ class SonicDataHandler:
         # Robustness Check 1: Inverted Checksum
         # Check: (length ^ inv_length) should be 0xFFFF (all 1s)
         if (length ^ inv_length) != 0xFFFF:
-            raise ValueError(
-                f"Header Corruption: Length Checksum Failed (Len={length}, Inv={inv_length})"
-            )
+            raise ValueError(f"Header Corruption: Length Checksum Failed (Len={length}, Inv={inv_length})")
 
         # Robustness Check 2: Sanity Limit
         # WebSockets/Audio buffer is finite. Set a reasonable MTU.
@@ -76,9 +75,7 @@ class SonicDataHandler:
 
         if len(data_stream) < header_size + length:
             # This is a legitimate "Wait for more data" case
-            raise ValueError(
-                f"Incomplete packet. Expected {length} bytes, got {len(data_stream)-header_size}"
-            )
+            raise ValueError(f"Incomplete packet. Expected {length} bytes, got {len(data_stream) - header_size}")
 
         encoded_payload = data_stream[header_size : header_size + length]
 
@@ -91,7 +88,7 @@ class SonicDataHandler:
         # 3. RS Decode
         try:
             original_payload, _, _ = self.rsc.decode(encoded_payload)
-            return original_payload
+            return bytes(original_payload)
 
         except ReedSolomonError as e:
             raise e

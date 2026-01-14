@@ -1,8 +1,10 @@
 import unittest
-import numpy as np
 from unittest.mock import patch
-from sonictag.transceiver import SonicTransmitter, SonicReceiver
+
+import numpy as np
+
 from sonictag.data import SonicDataHandler
+from sonictag.transceiver import SonicReceiver, SonicTransmitter
 
 
 class TestTransceiver(unittest.TestCase):
@@ -173,9 +175,7 @@ class TestTransceiver(unittest.TestCase):
         padding_start = np.zeros(sync_idx + preamble_len + gap_len, dtype=np.float32)
 
         # Add ofdm_sig + some tail padding
-        rx_input = np.concatenate(
-            [padding_start, ofdm_sig, np.zeros(100, dtype=np.float32)]
-        )
+        rx_input = np.concatenate([padding_start, ofdm_sig, np.zeros(100, dtype=np.float32)])
 
         # 3. Decode with Mock
         # Logic:
@@ -196,10 +196,14 @@ class TestTransceiver(unittest.TestCase):
         # To verify we HIT the decode logic (Line 163), we mock data_handler.decode
         # to raise a specific error that results in consumption (e.g. Header Corruption).
 
-        with patch.object(self.rx.sync, "detect", return_value=sync_idx), patch.object(
-            self.rx, "filter_signal", side_effect=lambda x: x
-        ), patch.object(
-            self.rx.data_handler, "decode", side_effect=ValueError("Header Corruption")
+        with (
+            patch.object(self.rx.sync, "detect", return_value=sync_idx),
+            patch.object(self.rx, "filter_signal", side_effect=lambda x: x),
+            patch.object(
+                self.rx.data_handler,
+                "decode",
+                side_effect=ValueError("Header Corruption"),
+            ),
         ):
             decoded, consumed = self.rx.decode_frame(rx_input)
 
@@ -207,3 +211,103 @@ class TestTransceiver(unittest.TestCase):
 
         # Exception should be raised (Header Corruption) -> last_error set -> returns 500
         self.assertGreater(consumed, 0)
+
+    def test_reassemble_invalid_inputs(self):
+        """Test reassemble validation logic."""
+        # 1. Too short
+        self.assertEqual(self.rx.reassemble(b"12"), b"12")
+
+        # 2. Not fragments (struct unpack fail or logic fail)
+        # 3 bytes, but not valid logic (e.g. index >= total)
+        # [MsgID=1, Index=5, Total=2]
+        import struct
+
+        bad_frag = struct.pack("BBB", 1, 5, 2) + b"data"
+        self.assertEqual(self.rx.reassemble(bad_frag), bad_frag)
+
+    def test_reassemble_partial_flow(self):
+        """Test partial reassembly state."""
+        import struct
+
+        # MsgID 10, Total 2
+        # Frag 0
+        payload_0 = b"PartA"
+        frag_0 = struct.pack("BBB", 10, 0, 2) + payload_0
+
+        # Frag 1
+        payload_1 = b"PartB"
+        frag_1 = struct.pack("BBB", 10, 1, 2) + payload_1
+
+        # Send Frag 0
+        res = self.rx.reassemble(frag_0)
+        self.assertIsNone(res)  # Should wait
+
+        # Check internal buffer exists (implementation detail check)
+        self.assertIn(10, self.rx._fragment_buffer)
+
+        # Send Frag 1
+        res = self.rx.reassemble(frag_1)
+        self.assertEqual(res, payload_0 + payload_1)
+
+        # Check buffer cleared
+        self.assertNotIn(10, self.rx._fragment_buffer)
+
+    def test_reassemble_collision_logic(self):
+        """Test reaction to collision of MsgID (buffer overwrite)."""
+        import struct
+
+        # 1. Start MsgID 20 with Total 10
+        frag_A = struct.pack("BBB", 20, 0, 10) + b"A"
+        self.rx.reassemble(frag_A)
+        self.assertEqual(self.rx._fragment_buffer[20]["total"], 10)
+
+        # 2. Receive MsgID 20 with Total 2 (Collision or new message reusing ID)
+        # Should raise ValueError now
+        frag_B = struct.pack("BBB", 20, 0, 2) + b"B"
+
+        with self.assertRaises(ValueError) as cm:
+            self.rx.reassemble(frag_B)
+
+        self.assertIn("Collision", str(cm.exception))
+
+        # Verify frag_A is still there (not overwritten or cleared, logic preserves state on error)
+        self.assertEqual(self.rx._fragment_buffer[20]["total"], 10)
+        self.assertEqual(self.rx._fragment_buffer[20]["fragments"][0], b"A")
+
+    def test_reassemble_gap_indices(self):
+        """Test reaction to malformed indices (Index out of range) which triggers KeyError logic."""
+        import struct
+
+        # Total 3. Send indices 0, 1, 5.
+        # Length of buffer keys will be 3.
+        # But reconstruction loop range(3) looks for 0, 1, 2.
+        # 2 is missing -> KeyError -> Return None.
+
+        f1 = struct.pack("BBB", 30, 0, 3) + b"A"
+        f2 = struct.pack("BBB", 30, 1, 3) + b"B"
+        f3 = struct.pack("BBB", 30, 5, 3) + b"C"  # Invalid index
+
+        self.rx.reassemble(f1)
+        self.rx.reassemble(f2)
+        res = self.rx.reassemble(f3)
+
+        # Validates that "index >= total" check (Line 203) works
+        # Returns raw payload because index 5 >= total 3
+        self.assertEqual(res, f3)
+
+        # Verify buffer not cleared (still waiting, has 0, 1)
+        self.assertIn(30, self.rx._fragment_buffer)
+        self.assertEqual(len(self.rx._fragment_buffer[30]["fragments"]), 2)
+
+    def test_reassemble_duplicates(self):
+        """Test that sending same fragment twice doesn't break logic."""
+        import struct
+
+        frag = struct.pack("BBB", 30, 0, 2) + b"Data"
+
+        self.rx.reassemble(frag)
+        self.assertEqual(len(self.rx._fragment_buffer[30]["fragments"]), 1)
+
+        # Send again
+        self.rx.reassemble(frag)
+        self.assertEqual(len(self.rx._fragment_buffer[30]["fragments"]), 1)  # Still 1

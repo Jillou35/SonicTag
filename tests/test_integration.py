@@ -1,6 +1,7 @@
-import pytest
 import numpy as np
-from sonictag.transceiver import SonicTransmitter, SonicReceiver
+import pytest
+
+from sonictag.transceiver import SonicReceiver, SonicTransmitter
 
 
 @pytest.fixture

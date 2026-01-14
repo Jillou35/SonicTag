@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import signal
+
 from .logger import logger
 
 
@@ -23,9 +24,7 @@ class SonicSync:
 
         # Generate the reference chirp
         t = np.linspace(0, self.duration, int(self.fs * self.duration), endpoint=False)
-        self.preamble = signal.chirp(
-            t, f0=self.start_freq, f1=self.end_freq, t1=self.duration, method="linear"
-        )
+        self.preamble = signal.chirp(t, f0=self.start_freq, f1=self.end_freq, t1=self.duration, method="linear")
 
         # Normalize preamble
         self.preamble /= np.max(np.abs(self.preamble))
@@ -44,11 +43,12 @@ class SonicSync:
         self.max_peak = np.sum(self.preamble**2)
 
     def generate_preamble(self) -> np.ndarray:
+        """
+        Returns the generated preamble.
+        """
         return self.preamble
 
-    def detect(
-        self, audio_chunk: np.ndarray, min_peak: float = 4.0, min_snr: float = 3.0
-    ) -> int:
+    def detect(self, audio_chunk: np.ndarray, min_peak: float = 4.0, min_snr: float = 3.0) -> int:
         """
         Finds the sample index where the preamble STARTS.
         Returns start index of preamble, or -1 if not found.
@@ -66,7 +66,7 @@ class SonicSync:
         corr_mag = np.abs(corr)
 
         # Find max peak
-        peak_idx = np.argmax(corr_mag)
+        peak_idx = int(np.argmax(corr_mag))
         peak_val = corr_mag[peak_idx]
 
         # Calculate SNR (Emergence)
@@ -82,9 +82,7 @@ class SonicSync:
 
         # Debug: Log peak to see signal quality
         if quality > 2.0:  # Log if > 2% signal strength
-            logger.debug(
-                f"Sync Check | Peak: {peak_val:.2f} | SNR: {snr:.1f} | Thr: P>{min_peak} or S>{min_snr}"
-            )
+            logger.debug(f"Sync Check | Peak: {peak_val:.2f} | SNR: {snr:.1f} | Thr: P>{min_peak} or S>{min_snr}")
 
         # Detection Logic: Combined Absolute OR Relative (Emergence)
         is_found = False
@@ -99,9 +97,7 @@ class SonicSync:
             is_found = True
 
         if is_found:
-            logger.debug(
-                f"Sync FOUND | Peak: {peak_val:.2f} ({quality:.1f}%) | SNR: {snr:.1f} at idx {peak_idx}"
-            )
+            logger.debug(f"Sync FOUND | Peak: {peak_val:.2f} ({quality:.1f}%) | SNR: {snr:.1f} at idx {peak_idx}")
             return peak_idx
 
         return -1

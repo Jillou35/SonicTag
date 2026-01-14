@@ -1,9 +1,12 @@
+import struct
+
 import numpy as np
 from scipy import signal
-from .data import SonicDataHandler, ReedSolomonError
+
+from .data import ReedSolomonError, SonicDataHandler
+from .logger import logger
 from .ofdm import SonicOFDM
 from .sync import SonicSync
-from .logger import logger
 
 
 class SonicTransmitter:
@@ -51,9 +54,7 @@ class SonicTransmitter:
         # 6. Apply Bandpass Filter to smooth discontinuities
         # The raw concatenation of OFDM symbols creates step discontinuities.
         # These appear as broadband noise (clicks) at the symbol rate (~88Hz).
-        sos = signal.butter(
-            4, [17000, 21000], btype="bandpass", fs=self.fs, output="sos"
-        )
+        sos = signal.butter(4, [17000, 21000], btype="bandpass", fs=self.fs, output="sos")
         full_signal = signal.sosfiltfilt(sos, raw_signal)
         # full_signal = raw_signal # BYPASS
 
@@ -65,11 +66,11 @@ class SonicTransmitter:
         # Apply a tiny fade in/out to the ENTIRE frame to ensure it starts/ends at 0
         # This prevents the "click" when the audio hardware starts playing a non-zero sample.
         taper_len = int(0.005 * self.fs)  # 5ms taper
-        if len(full_signal) > 2 * taper_len:
-            # Fade In
-            full_signal[:taper_len] *= np.linspace(0, 1, taper_len)
-            # Fade Out
-            full_signal[-taper_len:] *= np.linspace(1, 0, taper_len)
+        # Length is always sufficient due to preamble
+        # Fade In
+        full_signal[:taper_len] *= np.linspace(0, 1, taper_len)
+        # Fade Out
+        full_signal[-taper_len:] *= np.linspace(1, 0, taper_len)
 
         return full_signal
 
@@ -146,16 +147,12 @@ class SonicReceiver:
             # Sync Jitter loop
             offsets = [0, -1, 1, -2, 2, -3, 3, -4, 4]
 
-            logger.debug(
-                f"Sync Locked ({polarity}) at {start_idx}. Exploring offsets..."
-            )
+            logger.debug(f"Sync Locked ({polarity}) at {start_idx}. Exploring offsets...")
 
             for offset in offsets:
                 try:
                     packet_start = start_idx + preamble_len + gap_len + offset
 
-                    if packet_start < 0:
-                        continue
                     if packet_start >= len(filtered_chunk):
                         continue
 
@@ -183,3 +180,57 @@ class SonicReceiver:
                     logger.debug(f"Receiver Failed: {e}")
                     return None, 500  # Fallback consumption
         return None, 0
+
+    def reassemble(self, payload: bytes) -> bytes | None:
+        """
+        Attempts to reassemble a fragmented payload.
+        Expects payload format: [MsgID (1B)] [Index (1B)] [Total (1B)] [Data...]
+        Returns full payload if complete, else None.
+        """
+        if len(payload) < 3:
+            return payload  # Too short to be a fragment, return as is
+
+        msg_id, index, total = struct.unpack("BBB", payload[:3])
+
+        # Basic logical checks (Total must be > 1 to be a split, or at least >= 1. 255 max)
+        if total == 0 or index >= total:
+            return payload
+
+        data = payload[3:]
+
+        # Initialize buffer
+
+        if not hasattr(self, "_fragment_buffer"):
+            self._fragment_buffer: dict = {}
+
+        if msg_id not in self._fragment_buffer:
+            self._fragment_buffer[msg_id] = {
+                "total": total,
+                "fragments": {},
+            }
+
+        buffer = self._fragment_buffer[msg_id]
+
+        # Security/Collision check: same ID but different Total?
+        if buffer["total"] != total:
+            # ID Collision detected (different packet size for same ID)
+            # This implies synchronization error or malicious reuse. Fail safely.
+            raise ValueError(f"MsgID {msg_id} Collision: Existing Total={buffer['total']}, New Total={total}")
+
+        buffer["fragments"][index] = data
+
+        # Check completion
+        # We need check if we have ALL indices from 0 to total-1
+        # Simple len check is insufficient if malicious/erroneous indices exist (e.g. 0,1,5 for total 3)
+        if len(buffer["fragments"]) == total:
+            # Reconstruct
+            full_data = b""
+            for i in range(total):
+                full_data += buffer["fragments"][i]
+
+            # Clean buffer
+            del self._fragment_buffer[msg_id]
+
+            return full_data
+
+        return None  # Consumed, waiting for more

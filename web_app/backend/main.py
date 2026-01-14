@@ -1,16 +1,18 @@
 import asyncio
+import io
 import json
 import logging
-import io
 import queue
 import threading
+
 import numpy as np
 import scipy.io.wavfile
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
-from sonictag.transceiver import SonicTransmitter, SonicReceiver
+
+from sonictag.transceiver import SonicReceiver, SonicTransmitter
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO)
@@ -90,9 +92,7 @@ def audio_processing_worker():
 
                     # Broadcast back to WebSockets
                     if main_loop and main_loop.is_running():
-                        asyncio.run_coroutine_threadsafe(
-                            broadcast_message(message), main_loop
-                        )
+                        asyncio.run_coroutine_threadsafe(broadcast_message(message), main_loop)
 
             except Exception:
                 logger.debug("Decode failed")
@@ -199,9 +199,7 @@ async def receive_socket(websocket: WebSocket):
                         # CAUTION: This affects all connected clients (Single User assumption).
                         global rx, tx
                         if client_sr != rx.fs:
-                            logger.warning(
-                                f"Switching Backend Sample Rate to {client_sr} Hz"
-                            )
+                            logger.warning(f"Switching Backend Sample Rate to {client_sr} Hz")
                             # Re-init Transceiver
                             rx = SonicReceiver(sample_rate=client_sr)
                             tx = SonicTransmitter(sample_rate=client_sr)
@@ -225,9 +223,7 @@ async def receive_socket(websocket: WebSocket):
         if websocket in active_connections:
             active_connections.remove(websocket)
     except RuntimeError as e:
-        if 'Cannot call "receive" once a disconnect message has been received' in str(
-            e
-        ):
+        if 'Cannot call "receive" once a disconnect message has been received' in str(e):
             logger.info("Client disconnected (RuntimeError)")
             if websocket in active_connections:
                 active_connections.remove(websocket)

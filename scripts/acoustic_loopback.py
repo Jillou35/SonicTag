@@ -1,13 +1,14 @@
+import argparse
+import json
+import logging
+import time
+from pathlib import Path
+
 import numpy as np
 import scipy.io.wavfile as wav
 import sounddevice as sd
-import time
-import json
-import logging
-import argparse
-from pathlib import Path
 
-from sonictag.transceiver import SonicTransmitter, SonicReceiver
+from sonictag.transceiver import SonicReceiver, SonicTransmitter
 
 WAV_FOLDER = Path(__file__).parent.parent / "data"
 WAV_FOLDER.mkdir(exist_ok=True, parents=True)
@@ -19,9 +20,7 @@ logger = logging.getLogger("AcousticTest")
 logging.getLogger("sonictag").setLevel(logging.DEBUG)
 
 
-def run_acoustic_test(
-    fs: int = 48000, device_in: int | None = None, device_out: int | None = None
-):
+def run_acoustic_test(fs: int = 48000, device_in: int | None = None, device_out: int | None = None):
     # Configuration
     DURATION_SILENCE = 0.5
 
@@ -67,9 +66,7 @@ def run_acoustic_test(
 
         rx_signal = recording.flatten()
         wav.write(WAV_FOLDER / "rx_test.wav", fs, rx_signal)
-        logger.info(
-            f"Recorded {len(rx_signal)} samples. Max Amp: {np.max(np.abs(rx_signal)):.4f}"
-        )
+        logger.info(f"Recorded {len(rx_signal)} samples. Max Amp: {np.max(np.abs(rx_signal)):.4f}")
 
         # Normalize
         max_val = np.max(np.abs(rx_signal))
@@ -93,22 +90,12 @@ def run_acoustic_test(
     except Exception as e:
         logger.error(f"Error: {e}")
 
-    except Exception as e:
-        logger.error(f"Audio Hardware Error: {e}")
-        logger.info(
-            "Ensure 'sounddevice' is installed (pip install sounddevice) and a mic/speaker is active."
-        )
-
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(description="SonicTag Acoustic Loopback Test")
     argparser.add_argument("--fs", "-f", type=int, default=48000, help="Sample Rate")
-    argparser.add_argument(
-        "--device-in", "-i", type=int, default=None, help="Input Device Index"
-    )
-    argparser.add_argument(
-        "--device-out", "-o", type=int, default=None, help="Output Device Index"
-    )
+    argparser.add_argument("--device-in", "-i", type=int, default=None, help="Input Device Index")
+    argparser.add_argument("--device-out", "-o", type=int, default=None, help="Output Device Index")
     args = argparser.parse_args()
 
     # Pass device args to run function (need to update run_acoustic_test signature first)
