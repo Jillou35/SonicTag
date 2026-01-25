@@ -1,7 +1,0 @@
-fastapi
-uvicorn
-sounddevice
-soundfile
-websockets
-# Install the parent package in editable mode
--e ../..
