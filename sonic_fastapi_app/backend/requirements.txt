@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+sounddevice
+soundfile
+websockets
+sonictag==0.2.0

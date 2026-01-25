@@ -145,6 +145,29 @@ To run the full web application demo (Frontend + Backend):
 2. Grant microphone permissions when prompted.
 3. Use the interface to transmit and receive data between devices or tabs.
 
+## Steganography Web App (Django)
+
+A specific web application for embedding and extracting hidden messages from audio files using `sonictag`.
+
+### Setup & Run
+1. Navigate to the directory:
+   ```bash
+   cd stego_web_app
+   ```
+2. Start with Docker:
+   ```bash
+   docker compose up --build
+   ```
+3. Access the application:
+   - Frontend: [http://localhost:5173](http://localhost:5173)
+   - Backend API: [http://localhost:8000](http://localhost:8000)
+
+### Features
+- **Encode**: Upload an audio file (MP3/WAV) and a secret message. download the resulting "stego-audio".
+- **Decode**: Upload a stego-audio file to reveal the hidden message.
+- **Drag & Drop**: Modern UI for easy file handling.
+- **Background Processing**: Uses Celery and Redis for handling large audio files asynchronously.
+
 ## Scripts
 
 ### Acoustic Loopback Test

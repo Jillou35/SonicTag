@@ -1,0 +1,144 @@
+:root {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --border: #334155;
+    --success: #10b981;
+    --error: #ef4444;
+}
+
+body {
+    margin: 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.card {
+    background-color: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 2rem;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    text-align: center;
+    background: linear-gradient(to right, #60a5fa, #a78bfa);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+input[type="text"],
+textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+input[type="text"]:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.file-drop {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.file-drop:hover {
+    border-color: var(--accent);
+    background-color: rgba(59, 130, 246, 0.05);
+}
+
+.btn {
+    width: 100%;
+    padding: 1rem;
+    border-radius: 8px;
+    border: none;
+    background-color: var(--accent);
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn:hover {
+    background-color: var(--accent-hover);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-top: 1rem;
+}
+
+.status-PENDING {
+    background-color: #f59e0b20;
+    color: #fbbf24;
+}
+
+.status-PROCESSING {
+    background-color: #3b82f620;
+    color: #60a5fa;
+}
+
+.status-COMPLETED {
+    background-color: #10b98120;
+    color: #34d399;
+}
+
+.status-ERROR {
+    background-color: #ef444420;
+    color: #f87171;
+}
+
+.result-box {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+}

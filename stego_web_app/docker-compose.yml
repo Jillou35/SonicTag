@@ -1,0 +1,67 @@
+services:
+  web:
+    build: ./backend
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./backend:/app
+      # Mount the parent src folder so 'sonictag' package is visible
+      # relative to stego_web_app (project root), src is in ../src
+      - ../src:/app/src
+    environment:
+      - POSTGRES_DB=sonictag
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_HOST=db
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      # Critical for imports: add src to pythonpath
+      - PYTHONPATH=/app/src
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+
+  worker:
+    build: ./backend
+    command: celery -A config worker --loglevel=info
+    volumes:
+      - ./backend:/app
+      - ../src:/app/src
+    environment:
+      - POSTGRES_DB=sonictag
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_HOST=db
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - PYTHONPATH=/app/src
+    depends_on:
+      - db
+      - redis
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    command: sh -c "npm install && npm run dev -- --host"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - web
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=sonictag
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+
+volumes:
+  postgres_data:
