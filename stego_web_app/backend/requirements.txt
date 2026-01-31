@@ -11,3 +11,4 @@ scipy
 soundfile
 sonictag==0.2.0
 pydub>=0.25.1
+whitenoise>=6.5.0
