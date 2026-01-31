@@ -13,6 +13,9 @@ services:
       - POSTGRES_PASSWORD=secret
       - POSTGRES_HOST=db
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - CORS_ALLOW_ALL_ORIGINS=${CORS_ALLOW_ALL_ORIGINS:-True}
     ports:
       - "8000:8000"
     depends_on:
@@ -30,6 +33,9 @@ services:
       - POSTGRES_PASSWORD=secret
       - POSTGRES_HOST=db
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - CORS_ALLOW_ALL_ORIGINS=${CORS_ALLOW_ALL_ORIGINS:-True}
     depends_on:
       - db
       - redis
@@ -38,6 +44,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:8000/api}
     ports:
       - "5173:5173"
     depends_on:

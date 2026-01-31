@@ -7,7 +7,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-dev-key-change
 
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -54,7 +54,13 @@ TEMPLATES = [
 ]
 
 # CORS Configuration
-CORS_ALLOW_ALL_ORIGINS = True
+# For production, we want to restrict this to the frontend domain
+CORS_ALLOW_ALL_ORIGINS = os.environ.get("CORS_ALLOW_ALL_ORIGINS", "True") == "True"
+
+if not CORS_ALLOW_ALL_ORIGINS:
+    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+    CORS_ALLOWED_ORIGINS = [frontend_url]
+    CSRF_TRUSTED_ORIGINS = [frontend_url]
 
 WSGI_APPLICATION = "config.wsgi.application"
 

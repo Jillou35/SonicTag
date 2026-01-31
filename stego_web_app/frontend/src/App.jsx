@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, FileAudio, AlertCircle, Loader2, Download, Lock, Unlock } from 'lucide-react';
 
-const API_Base = 'http://localhost:8000/api'; // In docker, we might rely on vite proxy, but locally we hit 8000
+const API_Base = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 function App() {
     const [file, setFile] = useState(null);
