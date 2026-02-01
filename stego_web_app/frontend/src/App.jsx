@@ -73,8 +73,9 @@ function App() {
         if (!resultUrl) return;
 
         try {
-            // Construct absolute URL if needed
-            const downloadUrl = resultUrl.startsWith('http') ? resultUrl : `http://localhost:8000${resultUrl}`;
+            // Construct absolute URL using API_Base
+            // This correctly resolves /media/... against the API domain
+            const downloadUrl = resultUrl.startsWith('http') ? resultUrl : new URL(resultUrl, API_Base).href;
 
             const response = await fetch(downloadUrl);
             if (!response.ok) throw new Error('Download failed');
