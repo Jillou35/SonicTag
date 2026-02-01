@@ -24,6 +24,9 @@ ENV PYTHONUNBUFFERED=1
 # Create a non-root user
 RUN useradd -m -u 1000 appuser
 
+# Create necessary directories
+RUN mkdir -p /app/media /app/staticfiles
+
 # Set permissions for the app directory
 RUN chown -R appuser:appuser /app
 
