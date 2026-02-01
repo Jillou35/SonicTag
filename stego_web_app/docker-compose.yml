@@ -6,9 +6,9 @@ services:
              python manage.py collectstatic --noinput &&
              gunicorn config.wsgi:application --bind 0.0.0.0:8000"
     environment:
-      - POSTGRES_DB=sonictag
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=${POSTGRES_DB:-sonictag}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secret}
       - POSTGRES_HOST=db
       - CELERY_BROKER_URL=redis://redis:6379/0
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
@@ -19,14 +19,16 @@ services:
     depends_on:
       - db
       - redis
+    volumes:
+      - media_data:/app/media
 
   worker:
     build: ./backend
     command: celery -A config.celery worker --loglevel=info
     environment:
-      - POSTGRES_DB=sonictag
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=${POSTGRES_DB:-sonictag}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secret}
       - POSTGRES_HOST=db
       - CELERY_BROKER_URL=redis://redis:6379/0
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
@@ -35,6 +37,8 @@ services:
     depends_on:
       - db
       - redis
+    volumes:
+      - media_data:/app/media
 
   frontend:
     build:
@@ -50,9 +54,9 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_DB=sonictag
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=${POSTGRES_DB:-sonictag}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secret}
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -61,3 +65,4 @@ services:
 
 volumes:
   postgres_data:
+  media_data:
