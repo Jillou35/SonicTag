@@ -15,11 +15,17 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 COPY requirements.txt .
 RUN uv pip install --system --no-cache -r requirements.txt
 
+# Copy the rest of the application
+COPY . .
+
 # Environment setup
 ENV PYTHONUNBUFFERED=1
 
 # Create a non-root user
 RUN useradd -m -u 1000 appuser
+
+# Create necessary directories
+RUN mkdir -p /app/media /app/staticfiles
 
 # Set permissions for the app directory
 RUN chown -R appuser:appuser /app

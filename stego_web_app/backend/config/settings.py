@@ -7,7 +7,10 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-dev-key-change
 
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = ["*"]
+# Trust the X-Forwarded-Proto header for HTTPS detection (needed for Coolify/Traefik)
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -25,6 +28,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -53,7 +57,13 @@ TEMPLATES = [
 ]
 
 # CORS Configuration
-CORS_ALLOW_ALL_ORIGINS = True
+# For production, we want to restrict this to the frontend domain
+CORS_ALLOW_ALL_ORIGINS = os.environ.get("CORS_ALLOW_ALL_ORIGINS", "True") == "True"
+
+if not CORS_ALLOW_ALL_ORIGINS:
+    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+    CORS_ALLOWED_ORIGINS = [frontend_url]
+    CSRF_TRUSTED_ORIGINS = [frontend_url]
 
 WSGI_APPLICATION = "config.wsgi.application"
 
@@ -95,6 +105,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"

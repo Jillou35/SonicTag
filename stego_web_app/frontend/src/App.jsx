@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileAudio, AlertCircle, Loader2, Download, Lock, Unlock } from 'lucide-react';
+import { Upload, FileAudio, AlertCircle, Loader2, Download, Lock, Unlock, Github } from 'lucide-react';
 
-const API_Base = 'http://localhost:8000/api'; // In docker, we might rely on vite proxy, but locally we hit 8000
+const API_Base = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 function App() {
     const [file, setFile] = useState(null);
@@ -73,10 +73,16 @@ function App() {
         if (!resultUrl) return;
 
         try {
-            // Construct absolute URL if needed
-            const downloadUrl = resultUrl.startsWith('http') ? resultUrl : `http://localhost:8000${resultUrl}`;
+            // Construct absolute URL using API_Base
+            // This correctly resolves /media/... against the API domain
+            let urlStr = resultUrl.startsWith('http') ? resultUrl : new URL(resultUrl, API_Base).href;
 
-            const response = await fetch(downloadUrl);
+            // Fix Mixed Content: If we are on HTTPS, ensure the download URL is also HTTPS
+            if (window.location.protocol === 'https:' && urlStr.startsWith('http:')) {
+                urlStr = urlStr.replace('http:', 'https:');
+            }
+
+            const response = await fetch(urlStr);
             if (!response.ok) throw new Error('Download failed');
 
             const blob = await response.blob();
@@ -85,7 +91,7 @@ function App() {
             // Create temp link to force download
             const link = document.createElement('a');
             link.href = blobUrl;
-            link.download = downloadUrl.split('/').pop() || 'stego_audio.wav';
+            link.download = urlStr.split('/').pop() || 'stego_audio.wav';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -143,7 +149,12 @@ function App() {
     return (
         <div className="container">
             <div className="card">
-                <h1 className="title">SonicTag Web</h1>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                    <h1 className="title" style={{ margin: 0 }}>SonicTag Web</h1>
+                    <button onClick={() => window.open('https://github.com/Jillou35/SonicTag', '_blank')} className="btn" style={{ width: '40px', height: '40px', borderRadius: '50%', padding: '0.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#835bb8ff', borderColor: 'white', borderWidth: '2px'}}>
+                        <Github size={20} />
+                    </button>
+                </div>
 
                 {/* Mode Toggle */}
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem', gap: '1rem' }}>
