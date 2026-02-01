@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileAudio, AlertCircle, Loader2, Download, Lock, Unlock } from 'lucide-react';
+import { Upload, FileAudio, AlertCircle, Loader2, Download, Lock, Unlock, Github } from 'lucide-react';
 
 const API_Base = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -149,7 +149,12 @@ function App() {
     return (
         <div className="container">
             <div className="card">
-                <h1 className="title">SonicTag Web</h1>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                    <h1 className="title" style={{ margin: 0 }}>SonicTag Web</h1>
+                    <button onClick={() => window.open('https://github.com/Jillou35/SonicTag', '_blank')} className="btn" style={{ width: '40px', height: '40px', borderRadius: '50%', padding: '0.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#835bb8ff', borderColor: 'white', borderWidth: '2px'}}>
+                        <Github size={20} />
+                    </button>
+                </div>
 
                 {/* Mode Toggle */}
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem', gap: '1rem' }}>
