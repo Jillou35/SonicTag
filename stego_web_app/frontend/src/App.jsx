@@ -75,9 +75,14 @@ function App() {
         try {
             // Construct absolute URL using API_Base
             // This correctly resolves /media/... against the API domain
-            const downloadUrl = resultUrl.startsWith('http') ? resultUrl : new URL(resultUrl, API_Base).href;
+            let urlStr = resultUrl.startsWith('http') ? resultUrl : new URL(resultUrl, API_Base).href;
 
-            const response = await fetch(downloadUrl);
+            // Fix Mixed Content: If we are on HTTPS, ensure the download URL is also HTTPS
+            if (window.location.protocol === 'https:' && urlStr.startsWith('http:')) {
+                urlStr = urlStr.replace('http:', 'https:');
+            }
+
+            const response = await fetch(urlStr);
             if (!response.ok) throw new Error('Download failed');
 
             const blob = await response.blob();

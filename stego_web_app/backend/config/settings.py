@@ -7,6 +7,9 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-dev-key-change
 
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 
+# Trust the X-Forwarded-Proto header for HTTPS detection (needed for Coolify/Traefik)
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 
 INSTALLED_APPS = [
