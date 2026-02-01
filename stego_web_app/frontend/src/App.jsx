@@ -91,7 +91,7 @@ function App() {
             // Create temp link to force download
             const link = document.createElement('a');
             link.href = blobUrl;
-            link.download = downloadUrl.split('/').pop() || 'stego_audio.wav';
+            link.download = urlStr.split('/').pop() || 'stego_audio.wav';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
